@@ -83,6 +83,7 @@ class BenchmarkModel:
         y_offer: pd.Series,
         X_manual: pd.DataFrame,
         y_manual: pd.Series,
+        weight,
     ):
         """Обучение модели.
         ML модель обучается на данных по предложениям на рынке (цены из объявления)
@@ -98,7 +99,8 @@ class BenchmarkModel:
             X_offer,
             y_offer,
             model__feature_name=[f"{i}" for i in range(70)],
-            model__categorical_feature=["67", "68", "69"],
+            model__categorical_feature=["67", "68", "69"], 
+            model__sample_weight=weight
         )
         logger.info("Find corr coefficient")
         self._find_corr_coefficient(X_manual, y_manual)
