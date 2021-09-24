@@ -1,6 +1,7 @@
 import argparse
 import logging.config
 import pandas as pd
+import numpy as np
 from traceback import format_exc
 
 from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel
