@@ -1,6 +1,7 @@
 import argparse
 import logging.config
 import pandas as pd
+import numpy as np
 from traceback import format_exc
 
 from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel
@@ -64,10 +65,10 @@ if __name__ == "__main__":
         logger.info(f"Input shape: {train_df.shape}")
         train_df = prepare_categorical(train_df)
 
-        X_offer = train_df[train_df.price_type == PriceTypeEnum.OFFER_PRICE][
-            NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
-        ]
-        y_offer = train_df[train_df.price_type == PriceTypeEnum.OFFER_PRICE][TARGET]
+        X_offer = train_df[NUM_FEATURES+CATEGORICAL_OHE_FEATURES+CATEGORICAL_STE_FEATURES]
+        y_offer = train_df[TARGET]
+        weight = np.ones_like(train_df['price_type'].values)*0.9
+        weight[train_df['price_type'].values == 0] = 0.1
         X_manual = train_df[train_df.price_type == PriceTypeEnum.MANUAL_PRICE][
             NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
         ]
@@ -82,7 +83,7 @@ if __name__ == "__main__":
             model_params=MODEL_PARAMS,
         )
         logger.info("Fit model")
-        model.fit(X_offer, y_offer, X_manual, y_manual)
+        model.fit(X_offer, y_offer, X_manual, y_manual, weight)
         logger.info("Save model")
         model.save(args["mp"])
 
