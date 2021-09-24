@@ -12,6 +12,15 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder
 from sklearn.exceptions import NotFittedError
 from raif_hack.data_transformers import SmoothedTargetEncoding
 
+from raif_hack.settings import (
+    MODEL_PARAMS,
+    LOGGING_CONFIG,
+    NUM_FEATURES,
+    CATEGORICAL_OHE_FEATURES,
+    CATEGORICAL_STE_FEATURES,
+    TARGET,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -199,7 +208,7 @@ class TwoStepBenchmarkModel:
             ]
         )
 
-        self.model = LGBMRegressor(**model_params)
+        self.model =  LGBMRegressor(**model_params)
         self.model2 = LGBMRegressor(**model_params)
 
         self.pipeline = Pipeline(
@@ -225,8 +234,8 @@ class TwoStepBenchmarkModel:
         self.pipeline.fit(
             X_offer,
             y_offer,
-            model__feature_name=[f"{i}" for i in range(70)],
-            model__categorical_feature=["67", "68", "69"],
+            model__feature_name=NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES,
+            model__categorical_feature=CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES,
         )
 
         killer_f = self.pipeline.predict(X_manual)
@@ -236,8 +245,8 @@ class TwoStepBenchmarkModel:
         self.pipeline2.fit(
             X_manual,
             y_manual,
-            model__feature_name=[f"{i}" for i in range(71)],
-            model__categorical_feature=["67", "68", "69"],
+            model__feature_name=NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES + ["killer_f"],
+            model__categorical_feature=CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES,
         )
 
         self.__is_fitted = True

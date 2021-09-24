@@ -34,14 +34,9 @@ def parse_args():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-    parser.add_argument(
-        "--train_data",
-        "-d",
-        type=str,
-        dest="d",
-        required=True,
-        help="Путь до обучающего датасета",
-    )
+
+    parser.add_argument("--val", action="store_true")
+
     parser.add_argument(
         "--model_path",
         "-mp",
@@ -59,8 +54,13 @@ if __name__ == "__main__":
     try:
         logger.info("START train.py")
         args = vars(parse_args())
-        logger.info("Load train df")
-        train_df = pd.read_csv(args["d"])
+
+        train_path = 'data/train.csv'
+        if args["val"]:
+            train_path = 'data/train_trunc.csv'
+
+        logger.info("Load train df from %s" % train_path)
+        train_df = pd.read_csv(train_path)
         logger.info(f"Input shape: {train_df.shape}")
         train_df = prepare_categorical(train_df)
 
@@ -86,15 +86,27 @@ if __name__ == "__main__":
         logger.info("Save model")
         model.save(args["mp"])
 
-        predictions_offer = model.predict(X_offer)
-        metrics = metrics_stat(
-            y_offer.values, predictions_offer / (1 + model.corr_coef)
-        )  # для обучающей выборки с ценами из объявлений смотрим качество без коэффициента
-        logger.info(f"Metrics stat for training data with offers prices: {metrics}")
+        # predictions_offer = model.predict(X_offer)
+        # metrics = metrics_stat(
+        #     y_offer.values, predictions_offer / (1 + model.corr_coef)
+        # )  # для обучающей выборки с ценами из объявлений смотрим качество без коэффициента
+        # logger.info(f"Metrics stat for training data with offers prices: {metrics}")
 
         predictions_manual = model.predict(X_manual)
         metrics = metrics_stat(y_manual.values, predictions_manual)
         logger.info(f"Metrics stat for training data with manual prices: {metrics}")
+
+        # Validation
+        val_df = pd.read_csv("data/validation.csv")
+        val_df = prepare_categorical(val_df)
+        X_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][
+            NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
+        ]
+        y_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][TARGET]
+        predictions_manual_val = model.predict(X_manual_val)
+        metrics = metrics_stat(y_manual_val.values, predictions_manual_val)
+        logger.info(f"Metrics stat for validation data with manual prices: {metrics}")
+
 
     except Exception as e:
         err = format_exc()
