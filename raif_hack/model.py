@@ -389,6 +389,7 @@ class WeightedTwoStepModel(BenchmarkModel):
         y_val_offer: typing.Optional[pd.Series] = None,
         X_val_manual: typing.Optional[pd.DataFrame] = None,
         y_val_manual: typing.Optional[pd.Series] = None,
+        use_best_model = False
     ):
         y_offer, y_manual, y_val_offer, y_val_manual = np.log(y_offer), np.log(y_manual), np.log(y_val_offer), np.log(y_val_manual)
         logger.info("Fit catboost")
@@ -414,7 +415,7 @@ class WeightedTwoStepModel(BenchmarkModel):
             # + CATEGORICAL_STE_FEATURES,
             # model__categorical_feature=CATEGORICAL_OHE_FEATURES
             # + CATEGORICAL_STE_FEATURES,
-            model__use_best_model=True,
+            model__use_best_model=use_best_model,
             model__eval_set=Pool(X_val_prep, y_val),
             model__sample_weight=weight,
         )
@@ -439,7 +440,7 @@ class WeightedTwoStepModel(BenchmarkModel):
             # + ["killer_f"],
             # model__categorical_feature=CATEGORICAL_OHE_FEATURES
             # + CATEGORICAL_STE_FEATURES,
-            model__use_best_model=True,
+            model__use_best_model=use_best_model,
             model__eval_set=Pool(X_val_manual_prep, y_val_manual)
         )
 
