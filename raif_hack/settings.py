@@ -83,7 +83,7 @@ MODEL_PARAMS = dict(
     num_leaves=40,
     min_child_samples=5,
     importance_type="gain",
-    n_jobs=1,
+    n_jobs=4,
     random_state=563,
 )
 

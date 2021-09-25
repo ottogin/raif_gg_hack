@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from traceback import format_exc
 
-from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel
+from raif_hack.model import *
 from raif_hack.settings import (
     MODEL_PARAMS,
     LOGGING_CONFIG,
@@ -35,7 +35,6 @@ def parse_args():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-
     parser.add_argument("--val", action="store_true")
 
     parser.add_argument(
@@ -53,22 +52,27 @@ def parse_args():
 if __name__ == "__main__":
 
     try:
-        logger.info("START train.py")
+        # for w in [0.0001, 0.0002, 0.0003, 0.0004, 0.0005,
+        #       0.001, 0.002, 0.003, 0.004, 0.005,
+        #       0.01, 0.02, 0.03, 0.04, 0.05,
+        #       0.1, 0.2, 0.3, 0.4]:
+        logger.info("START train.py with")
         args = vars(parse_args())
 
-        train_path = 'data/train.csv'
+        train_path = "data/train.csv"
         if args["val"]:
-            train_path = 'data/train_trunc.csv'
+            train_path = "data/train_trunc.csv"
 
         logger.info("Load train df from %s" % train_path)
         train_df = pd.read_csv(train_path)
         logger.info(f"Input shape: {train_df.shape}")
         train_df = prepare_categorical(train_df)
 
-        X_offer = train_df[NUM_FEATURES+CATEGORICAL_OHE_FEATURES+CATEGORICAL_STE_FEATURES]
-        y_offer = train_df[TARGET]
-        weight = np.ones_like(train_df['price_type'].values)*0.9
-        weight[train_df['price_type'].values == 0] = 0.1
+        X_offer = train_df[train_df.price_type == PriceTypeEnum.OFFER_PRICE][
+            NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
+        ]
+        y_offer = train_df[train_df.price_type == PriceTypeEnum.OFFER_PRICE][TARGET]
+
         X_manual = train_df[train_df.price_type == PriceTypeEnum.MANUAL_PRICE][
             NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
         ]
@@ -76,17 +80,16 @@ if __name__ == "__main__":
         logger.info(
             f"X_offer {X_offer.shape}  y_offer {y_offer.shape}\tX_manual {X_manual.shape} y_manual {y_manual.shape}"
         )
-        model = TwoStepBenchmarkModel(
+        model = WeightedTwoStepModel(
             numerical_features=NUM_FEATURES,
             ohe_categorical_features=CATEGORICAL_OHE_FEATURES,
             ste_categorical_features=CATEGORICAL_STE_FEATURES,
             model_params=MODEL_PARAMS,
         )
         logger.info("Fit model")
-        model.fit(X_offer, y_offer, X_manual, y_manual, weight)
+        model.fit(X_offer, y_offer, X_manual, y_manual)
         logger.info("Save model")
         model.save(args["mp"])
-
         # predictions_offer = model.predict(X_offer)
         # metrics = metrics_stat(
         #     y_offer.values, predictions_offer / (1 + model.corr_coef)
@@ -107,7 +110,6 @@ if __name__ == "__main__":
         predictions_manual_val = model.predict(X_manual_val)
         metrics = metrics_stat(y_manual_val.values, predictions_manual_val)
         logger.info(f"Metrics stat for validation data with manual prices: {metrics}")
-
 
     except Exception as e:
         err = format_exc()

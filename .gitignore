@@ -1,2 +1,6 @@
 *.pyc
 train.log
+data/train.csv
+data/train_trunc.csv
+catboost_info/
+raif_hack.zip
