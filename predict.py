@@ -6,6 +6,7 @@ from traceback import format_exc
 
 from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel, WeightedTwoStepModel
 from raif_hack.floor_processing import get_floor_nb_and_height_features
+from raif_hack.streets_reforms_processing import combine_street_region, fill_reforms_500_as_1000
 
 from raif_hack.settings import (
     LOGGING_CONFIG,
@@ -71,6 +72,11 @@ if __name__ == "__main__":
 
         test_df = pd.read_csv(args["d"])
         train_df, test_df = get_floor_nb_and_height_features(train_df, test_df)
+        # Street encoding
+        test_df = combine_street_region(test_df)
+
+        # Reform nan fill
+        # test_df = fill_reforms_500_as_1000(test_df)
 
         logger.info(f"Input shape: {test_df.shape}")
         test_df = prepare_categorical(test_df)

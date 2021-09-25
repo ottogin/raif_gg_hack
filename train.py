@@ -17,6 +17,7 @@ from raif_hack.utils import PriceTypeEnum
 from raif_hack.metrics import metrics_stat
 from raif_hack.features import prepare_categorical
 from raif_hack.floor_processing import get_floor_nb_and_height_features
+from raif_hack.streets_reforms_processing import combine_street_region, fill_reforms_500_as_1000
 
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
@@ -70,6 +71,15 @@ if __name__ == "__main__":
         val_df = pd.read_csv("data/validation.csv")
 
         train_df, val_df = get_floor_nb_and_height_features(train_df, val_df)
+
+        # Street encoding
+        train_df = combine_street_region(train_df)
+        val_df = combine_street_region(val_df)
+
+        # Reform nan fill
+        # train_df = fill_reforms_500_as_1000(train_df)
+        # val_df = fill_reforms_500_as_1000(val_df)
+
         train_df = prepare_categorical(train_df)
         val_df = prepare_categorical(val_df)
 
@@ -102,7 +112,9 @@ if __name__ == "__main__":
         ]
         y_offer_val = val_df[val_df.price_type == PriceTypeEnum.OFFER_PRICE][TARGET]
 
-        model.fit(X_offer, y_offer, X_manual, y_manual, X_offer_val, y_offer_val, X_manual_val, y_manual_val)
+        model.fit(
+            X_offer, y_offer, X_manual, y_manual, X_offer_val, y_offer_val, X_manual_val, y_manual_val,
+            use_best_model=args["val"])
         logger.info("Save model")
         model.save(args["mp"])
         # predictions_offer = model.predict(X_offer)
