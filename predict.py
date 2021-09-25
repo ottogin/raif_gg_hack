@@ -4,7 +4,9 @@ import pandas as pd
 from raif_hack.features import prepare_categorical
 from traceback import format_exc
 
-from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel
+from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel, WeightedTwoStepModel
+from raif_hack.floor_processing import get_floor_nb_and_height_features
+
 from raif_hack.settings import (
     LOGGING_CONFIG,
     NUM_FEATURES,
@@ -63,12 +65,18 @@ if __name__ == "__main__":
         logger.info("START predict.py")
         args = vars(parse_args())
         logger.info("Load test df")
+
+        train_path = "data/train.csv"
+        train_df = pd.read_csv(train_path)
+
         test_df = pd.read_csv(args["d"])
+        train_df, test_df = get_floor_nb_and_height_features(train_df, test_df)
+
         logger.info(f"Input shape: {test_df.shape}")
         test_df = prepare_categorical(test_df)
 
         logger.info("Load model")
-        model = TwoStepBenchmarkModel.load(args["mp"])
+        model = WeightedTwoStepModel.load(args["mp"])
         logger.info("Predict")
         test_df["per_square_meter_price"] = model.predict(
             test_df[NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES]

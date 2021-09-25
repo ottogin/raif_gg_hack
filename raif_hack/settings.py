@@ -74,6 +74,8 @@ NUM_FEATURES = [
     "reform_mean_year_building_1000",
     "reform_mean_year_building_500",
     "total_square",
+    "floor_mean_height",
+    "nb_floors"
 ]
 
 MODEL_PARAMS = dict(

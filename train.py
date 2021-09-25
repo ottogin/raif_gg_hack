@@ -16,6 +16,7 @@ from raif_hack.settings import (
 from raif_hack.utils import PriceTypeEnum
 from raif_hack.metrics import metrics_stat
 from raif_hack.features import prepare_categorical
+from raif_hack.floor_processing import get_floor_nb_and_height_features
 
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
@@ -66,7 +67,11 @@ if __name__ == "__main__":
         logger.info("Load train df from %s" % train_path)
         train_df = pd.read_csv(train_path)
         logger.info(f"Input shape: {train_df.shape}")
+        val_df = pd.read_csv("data/validation.csv")
+
+        train_df, val_df = get_floor_nb_and_height_features(train_df, val_df)
         train_df = prepare_categorical(train_df)
+        val_df = prepare_categorical(val_df)
 
         X_offer = train_df[train_df.price_type == PriceTypeEnum.OFFER_PRICE][
             NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
@@ -88,8 +93,6 @@ if __name__ == "__main__":
         )
         logger.info("Fit model")
 
-        val_df = pd.read_csv("data/validation.csv")
-        val_df = prepare_categorical(val_df)
         X_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][
             NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
         ]
