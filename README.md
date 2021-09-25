@@ -29,7 +29,7 @@
 </li>
     <li> Запустить инференс:
     
-    python3 predict.py --model_path model.pkl --test_data data --output final_submission.csv
+    python3 predict.py --model_path model.pkl --test_data data/test.csv --output final_submission.csv
 </li>
     <li> Предсказания содержатся в файле <b>final_submission.csv</b></li>
 </ol>
