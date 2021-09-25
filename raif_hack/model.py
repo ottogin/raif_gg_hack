@@ -552,6 +552,8 @@ class WeightedBlendModel(BenchmarkModel):
         y_val_offer: typing.Optional[pd.Series] = None,
         X_val_manual: typing.Optional[pd.DataFrame] = None,
         y_val_manual: typing.Optional[pd.Series] = None,
+        use_best_model = False,
+        w=0.9
     ):
         y_offer, y_manual, y_val_offer, y_val_manual = np.log(y_offer), np.log(y_manual), np.log(y_val_offer), np.log(y_val_manual)
         logger.info("Fit catboost")
@@ -564,8 +566,8 @@ class WeightedBlendModel(BenchmarkModel):
         )
         X_off_prep = self.pipeline3[:-1].transform(X_manual)
         self.pipeline3[-1:].fit(X_off_prep, y_manual)
-        y_offer = 0.9*y_offer + 0.1*self.pipeline3.predict(X_offer)
-        
+        y_offer = w * y_offer + (1 - w) * self.pipeline3.predict(X_offer)
+
         X = pd.concat([X_offer, X_manual])
         y = pd.concat([y_offer, y_manual])
         WEIGHT = 0.05
@@ -587,7 +589,7 @@ class WeightedBlendModel(BenchmarkModel):
             # + CATEGORICAL_STE_FEATURES,
             # model__categorical_feature=CATEGORICAL_OHE_FEATURES
             # + CATEGORICAL_STE_FEATURES,
-            model__use_best_model=True,
+            model__use_best_model=use_best_model,
             model__eval_set=Pool(X_val_prep, y_val),
             model__sample_weight=weight,
         )

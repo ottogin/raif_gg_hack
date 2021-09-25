@@ -4,7 +4,7 @@ import pandas as pd
 from raif_hack.features import prepare_categorical
 from traceback import format_exc
 
-from raif_hack.model import BenchmarkModel, TwoStepBenchmarkModel, WeightedTwoStepModel
+from raif_hack.model import *
 from raif_hack.floor_processing import get_floor_nb_and_height_features
 from raif_hack.streets_reforms_processing import combine_street_region, fill_reforms_500_as_1000
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         test_df = prepare_categorical(test_df)
 
         logger.info("Load model")
-        model = WeightedTwoStepModel.load(args["mp"])
+        model = WeightedBlendModel.load(args["mp"])
         logger.info("Predict")
         test_df["per_square_meter_price"] = model.predict(
             test_df[NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES]
