@@ -758,3 +758,192 @@ class WeightedBlendBoostModel(BenchmarkModel):
                     type(self).__name__
                 )
             )
+
+class WeightedBlendComplex(BenchmarkModel):
+    """
+    Модель представляет из себя sklearn pipeline. Пошаговый алгоритм:
+      1) в качестве обучения выбираются все данные с price_type=0
+      1) все фичи делятся на три типа (numerical_features, ohe_categorical_features, ste_categorical_features):
+          1.1) numerical_features - применяется StandardScaler
+          1.2) ohe_categorical_featires - кодируются через one hot encoding
+          1.3) ste_categorical_features - кодируются через SmoothedTargetEncoder
+      2) после этого все полученные фичи конкатенируются в одно пространство фичей и подаются на вход модели Lightgbm
+      3) делаем предикт на данных с price_type=1, считаем среднее отклонение реальных значений от предикта. Вычитаем это отклонение на финальном шаге (чтобы сместить отклонение к 0)
+
+    :param numerical_features: list, список численных признаков из датафрейма
+    :param ohe_categorical_features: list, список категориальных признаков для one hot encoding
+    :param ste_categorical_features, list, список категориальных признаков для smoothed target encoding.
+                                     Можно кодировать сразу несколько полей (например объединять категориальные признаки)
+    :
+    """
+
+    def __init__(
+        self,
+        numerical_features: typing.List[str],
+        ohe_categorical_features: typing.List[str],
+        ste_categorical_features: typing.List[typing.Union[str, typing.List[str]]],
+        model_params: typing.Dict[str, typing.Union[str, int, float]],
+    ):
+        self.num_features = numerical_features
+        self.ohe_cat_features = ohe_categorical_features
+        self.ste_cat_features = ste_categorical_features
+
+        self.preprocessor = ColumnTransformer(
+            transformers=[
+                ("num", StandardScaler(), self.num_features),
+                ("ohe", OneHotEncoder(), self.ohe_cat_features),
+                (
+                    "ste",
+                    OrdinalEncoder(
+                        handle_unknown="use_encoded_value", unknown_value=-1
+                    ),
+                    self.ste_cat_features,
+                ),
+            ]
+        )
+        self.preprocessor2 = ColumnTransformer(
+            transformers=[
+                ("num", StandardScaler(), self.num_features + ["killer_f"]),
+                ("ohe", OneHotEncoder(), self.ohe_cat_features),
+                (
+                    "ste",
+                    OrdinalEncoder(
+                        handle_unknown="use_encoded_value", unknown_value=-1
+                    ),
+                    self.ste_cat_features,
+                ),
+            ]
+        )
+        self.preprocessor3 = ColumnTransformer(
+            transformers=[
+                ("num", StandardScaler(), self.num_features),
+                ("ohe", OneHotEncoder(), self.ohe_cat_features),
+                (
+                    "ste",
+                    OrdinalEncoder(
+                        handle_unknown="use_encoded_value", unknown_value=-1
+                    ),
+                    self.ste_cat_features,
+                ),
+            ]
+        )
+        self.model = CatBoostRegressor(
+            #loss_function="MAE",
+            iterations=3000)
+        self.model2 = CatBoostRegressor(
+            #loss_function="MAE", 
+            iterations=2000)
+        self.model3 = CatBoostRegressor(iterations=2000)
+
+
+        self.pipeline = Pipeline(
+            steps=[("preprocessor", self.preprocessor), ("model", self.model)]
+        )
+        self.pipeline2 = Pipeline(
+            steps=[("preprocessor", self.preprocessor2), ("model", self.model2)]
+        )
+
+        self.pipeline3 = Pipeline(
+            steps=[("preprocessor", self.preprocessor3), ("model", self.model3)]
+        )
+
+
+        self._is_fitted = False
+        self.corr_coef = 0
+
+    def fit(
+        self,
+        X_offer: pd.DataFrame,
+        y_offer: pd.Series,
+        X_manual: pd.DataFrame,
+        y_manual: pd.Series,
+        X_val_offer: typing.Optional[pd.DataFrame] = None,
+        y_val_offer: typing.Optional[pd.Series] = None,
+        X_val_manual: typing.Optional[pd.DataFrame] = None,
+        y_val_manual: typing.Optional[pd.Series] = None,
+        use_best_model = True
+    ):
+        y_offer, y_manual, y_val_offer, y_val_manual = np.log(y_offer), np.log(y_manual), np.log(y_val_offer), np.log(y_val_manual)
+        logger.info("Fit catboost")
+
+        #self.pipeline3.fit(X_manual, y_manual)
+        y = pd.concat([y_offer, y_manual])
+        X_prep = self.pipeline3[:-1].fit_transform(
+            pd.concat([X_offer, X_manual]),
+            y
+        )
+        X_off_prep = self.pipeline3[:-1].transform(X_manual)
+        self.pipeline3[-1:].fit(X_off_prep, y_manual)
+        y_offer = 0.9*y_offer + 0.1*self.pipeline3.predict(X_offer)
+        
+        X = pd.concat([X_offer, X_manual])
+        y = pd.concat([y_offer, y_manual])
+        WEIGHT = 0.05
+        weight = np.ones_like(y.values) * WEIGHT
+        weight[-len(y_manual) :] = 1 - WEIGHT
+
+        X_prep = self.pipeline[:-1].fit_transform(
+            X,
+            y,
+        )
+        X_val = pd.concat([X_val_offer, X_val_manual])
+        y_val = pd.concat([y_val_offer, y_val_manual])
+        X_val_prep = self.pipeline[:-1].transform(X_val)
+        self.pipeline[-1:].fit(
+            X_prep, 
+            y,
+            # model__feature_name=NUM_FEATURES
+            # + CATEGORICAL_OHE_FEATURES
+            # + CATEGORICAL_STE_FEATURES,
+            # model__categorical_feature=CATEGORICAL_OHE_FEATURES
+            # + CATEGORICAL_STE_FEATURES,
+            model__use_best_model=True,
+            model__eval_set=Pool(X_val_prep, y_val),
+            model__sample_weight=weight,
+        )
+        killer_f = self.pipeline.predict(X_manual)
+        killer_f_val = self.pipeline.predict(X_val_manual)
+        X_manual = X_manual.copy()
+        X_val_manual = X_val_manual.copy()
+        X_manual["killer_f"] = killer_f
+        X_val_manual["killer_f"] = killer_f_val
+
+        logger.info("Fit catboost 2")
+
+        X_manual_prep = self.pipeline2[:-1].fit_transform(X_manual, y_manual)
+        X_val_manual_prep = self.pipeline2[:-1].transform(X_val_manual)
+        self.pipeline2[-1:].fit(
+            X_manual_prep,
+            y_manual,
+            # model__feature_name=NUM_FEATURES
+            # + CATEGORICAL_OHE_FEATURES
+            # + CATEGORICAL_STE_FEATURES
+            # + ["killer_f"],
+            # model__categorical_feature=CATEGORICAL_OHE_FEATURES
+            # + CATEGORICAL_STE_FEATURES,
+            model__use_best_model=True,
+            model__eval_set=Pool(X_val_manual_prep, y_val_manual)
+        )
+
+        self.__is_fitted = True
+
+    def predict(self, X: pd.DataFrame) -> np.array:
+        """Предсказание модели Предсказываем преобразованный таргет, затем конвертируем в обычную цену через обратное
+        преобразование.
+
+        :param X: pd.DataFrame
+        :return: np.array, предсказания (цены на коммерческую недвижимость)
+        """
+        if self.__is_fitted:
+            killer_f = self.pipeline.predict(X)
+            X = X.copy()
+            X["killer_f"] = killer_f
+            price = self.pipeline2.predict(X)
+            return 0.94*(np.exp(killer_f) + np.exp(price) + np.exp(self.pipeline3.predict(X)))/3
+            #return (np.exp(killer_f) + np.exp(self.pipeline3.predict(X)))/2
+        else:
+            raise NotFittedError(
+                "This {} instance is not fitted yet! Call 'fit' with appropriate arguments before predict".format(
+                    type(self).__name__
+                )
+            )
