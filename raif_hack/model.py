@@ -361,8 +361,12 @@ class WeightedTwoStepModel(BenchmarkModel):
         #     random_state=213,
         # )
 
-        self.model = CatBoostRegressor(loss_function="MAE", iterations=3000)
-        self.model2 = CatBoostRegressor(loss_function="MAE", iterations=2000)
+        self.model = CatBoostRegressor(
+            #loss_function="MAE",
+            iterations=3000)
+        self.model2 = CatBoostRegressor(
+            #loss_function="MAE", 
+            iterations=2000)
 
         self.pipeline = Pipeline(
             steps=[("preprocessor", self.preprocessor), ("model", self.model)]
@@ -386,7 +390,7 @@ class WeightedTwoStepModel(BenchmarkModel):
         X_val_manual: typing.Optional[pd.DataFrame] = None,
         y_val_manual: typing.Optional[pd.Series] = None,
     ):
-
+        y_offer, y_manual, y_val_offer, y_val_manual = np.log(y_offer), np.log(y_manual), np.log(y_val_offer), np.log(y_val_manual)
         logger.info("Fit catboost")
 
         X = pd.concat([X_offer, X_manual])
@@ -453,7 +457,7 @@ class WeightedTwoStepModel(BenchmarkModel):
             X = X.copy()
             X["killer_f"] = killer_f
             price = self.pipeline2.predict(X)
-            return price
+            return np.exp(price)
         else:
             raise NotFittedError(
                 "This {} instance is not fitted yet! Call 'fit' with appropriate arguments before predict".format(
