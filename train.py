@@ -87,7 +87,19 @@ if __name__ == "__main__":
             model_params=MODEL_PARAMS,
         )
         logger.info("Fit model")
-        model.fit(X_offer, y_offer, X_manual, y_manual)
+
+        val_df = pd.read_csv("data/validation.csv")
+        val_df = prepare_categorical(val_df)
+        X_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][
+            NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
+        ]
+        y_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][TARGET]
+        X_offer_val = val_df[val_df.price_type == PriceTypeEnum.OFFER_PRICE][
+            NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
+        ]
+        y_offer_val = val_df[val_df.price_type == PriceTypeEnum.OFFER_PRICE][TARGET]
+
+        model.fit(X_offer, y_offer, X_manual, y_manual, X_offer_val, y_offer_val, X_manual_val, y_manual_val)
         logger.info("Save model")
         model.save(args["mp"])
         # predictions_offer = model.predict(X_offer)
@@ -101,12 +113,6 @@ if __name__ == "__main__":
         logger.info(f"Metrics stat for training data with manual prices: {metrics}")
 
         # Validation
-        val_df = pd.read_csv("data/validation.csv")
-        val_df = prepare_categorical(val_df)
-        X_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][
-            NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES
-        ]
-        y_manual_val = val_df[val_df.price_type == PriceTypeEnum.MANUAL_PRICE][TARGET]
         predictions_manual_val = model.predict(X_manual_val)
         metrics = metrics_stat(y_manual_val.values, predictions_manual_val)
         logger.info(f"Metrics stat for validation data with manual prices: {metrics}")

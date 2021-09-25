@@ -5,7 +5,7 @@ import numpy as np
 import logging
 
 from lightgbm import LGBMRegressor
-from catboost import CatBoostRegressor
+from catboost import CatBoostRegressor, Pool
 
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -235,7 +235,7 @@ class TwoStepBenchmarkModel(BenchmarkModel):
         y_manual: pd.Series,
     ):
 
-        logger.info("Fit lightgbm")
+        logger.info("Fit catboost")
         self.pipeline.fit(
             X_offer,
             y_offer,
@@ -249,7 +249,7 @@ class TwoStepBenchmarkModel(BenchmarkModel):
         killer_f = self.pipeline.predict(X_manual)
         X_manual = X_manual.copy()
         X_manual["killer_f"] = killer_f
-        logger.info("Fit lightgbm 2")
+        logger.info("Fit catboost 2")
         self.pipeline2.fit(
             X_manual,
             y_manual,
@@ -361,8 +361,8 @@ class WeightedTwoStepModel(BenchmarkModel):
         #     random_state=213,
         # )
 
-        self.model = CatBoostRegressor()
-        self.model2 = CatBoostRegressor()
+        self.model = CatBoostRegressor(loss_function="MAE", iterations=3000)
+        self.model2 = CatBoostRegressor(loss_function="MAE", iterations=2000)
 
         self.pipeline = Pipeline(
             steps=[("preprocessor", self.preprocessor), ("model", self.model)]
@@ -381,9 +381,13 @@ class WeightedTwoStepModel(BenchmarkModel):
         y_offer: pd.Series,
         X_manual: pd.DataFrame,
         y_manual: pd.Series,
+        X_val_offer: typing.Optional[pd.DataFrame] = None,
+        y_val_offer: typing.Optional[pd.Series] = None,
+        X_val_manual: typing.Optional[pd.DataFrame] = None,
+        y_val_manual: typing.Optional[pd.Series] = None,
     ):
 
-        logger.info("Fit lightgbm")
+        logger.info("Fit catboost")
 
         X = pd.concat([X_offer, X_manual])
         y = pd.concat([y_offer, y_manual])
@@ -391,25 +395,39 @@ class WeightedTwoStepModel(BenchmarkModel):
         weight = np.ones_like(y.values) * WEIGHT
         weight[-len(y_manual) :] = 1 - WEIGHT
 
-        self.pipeline.fit(
+        X_prep = self.pipeline[:-1].fit_transform(
             X,
+            y,
+        )
+        X_val = pd.concat([X_val_offer, X_val_manual])
+        y_val = pd.concat([y_val_offer, y_val_manual])
+        X_val_prep = self.pipeline[:-1].transform(X_val)
+        self.pipeline[-1:].fit(
+            X_prep, 
             y,
             # model__feature_name=NUM_FEATURES
             # + CATEGORICAL_OHE_FEATURES
             # + CATEGORICAL_STE_FEATURES,
             # model__categorical_feature=CATEGORICAL_OHE_FEATURES
             # + CATEGORICAL_STE_FEATURES,
+            model__use_best_model=True,
+            model__eval_set=Pool(X_val_prep, y_val),
             model__sample_weight=weight,
         )
 
         killer_f = self.pipeline.predict(X_manual)
+        killer_f_val = self.pipeline.predict(X_val_manual)
         X_manual = X_manual.copy()
+        X_val_manual = X_val_manual.copy()
         X_manual["killer_f"] = killer_f
+        X_val_manual["killer_f"] = killer_f_val
 
-        logger.info("Fit lightgbm 2")
+        logger.info("Fit catboost 2")
 
-        self.pipeline2.fit(
-            X_manual,
+        X_manual_prep = self.pipeline2[:-1].fit_transform(X_manual, y_manual)
+        X_val_manual_prep = self.pipeline2[:-1].transform(X_val_manual)
+        self.pipeline2[-1:].fit(
+            X_manual_prep,
             y_manual,
             # model__feature_name=NUM_FEATURES
             # + CATEGORICAL_OHE_FEATURES
@@ -417,6 +435,8 @@ class WeightedTwoStepModel(BenchmarkModel):
             # + ["killer_f"],
             # model__categorical_feature=CATEGORICAL_OHE_FEATURES
             # + CATEGORICAL_STE_FEATURES,
+            model__use_best_model=True,
+            model__eval_set=Pool(X_val_manual_prep, y_val_manual)
         )
 
         self.__is_fitted = True

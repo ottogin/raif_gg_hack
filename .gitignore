@@ -4,3 +4,6 @@ data/train.csv
 data/train_trunc.csv
 catboost_info/
 raif_hack.zip
+data/
+models/
+raif_gg_hack.zip
