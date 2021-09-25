@@ -54,10 +54,6 @@ def parse_args():
 if __name__ == "__main__":
 
     try:
-        # for w in [0.0001, 0.0002, 0.0003, 0.0004, 0.0005,
-        #       0.001, 0.002, 0.003, 0.004, 0.005,
-        #       0.01, 0.02, 0.03, 0.04, 0.05,
-        #       0.1, 0.2, 0.3, 0.4]:
         logger.info("START train.py with")
         args = vars(parse_args())
 
@@ -95,7 +91,7 @@ if __name__ == "__main__":
         logger.info(
             f"X_offer {X_offer.shape}  y_offer {y_offer.shape}\tX_manual {X_manual.shape} y_manual {y_manual.shape}"
         )
-        model = WeightedTwoStepModel(
+        model = WeightedBlendModel(
             numerical_features=NUM_FEATURES,
             ohe_categorical_features=CATEGORICAL_OHE_FEATURES,
             ste_categorical_features=CATEGORICAL_STE_FEATURES,
@@ -114,7 +110,8 @@ if __name__ == "__main__":
 
         model.fit(
             X_offer, y_offer, X_manual, y_manual, X_offer_val, y_offer_val, X_manual_val, y_manual_val,
-            use_best_model=args["val"])
+            use_best_model=args["val"]
+            )
         logger.info("Save model")
         model.save(args["mp"])
         # predictions_offer = model.predict(X_offer)
