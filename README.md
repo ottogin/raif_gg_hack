@@ -1,59 +1,35 @@
-# Описание
-Это бенчмарк скрипт для хакатона от Раййфайзенбанка по оценке коммерческой недвижимости
-Бенчмарк состоит из:
-* pyproject.toml - конфигурационный файл для менеджера пакетов poetry (https://python-poetry.org/) - в интернете есть много статей, посвященных ему (например https://habr.com/ru/post/455335/ и https://khashtamov.com/ru/python-poetry-dependency-management/)
-* requirements.txt - стандартный requirements для pip
-* train.py - скрипт, который обучает модель и сохраняет ее
-* predict.py - скрипт, который делает предсказание на отложенной тестовой выборке
-
 # Запуск
-## Вариант с poetry
-**Крайне рекомендую именно установку с poetry** - poetry это новый packet manager для питона, и он гораздо круче чем pip. Разобравшись с ним (а это очень-очень просто), думаю, вы будете необычайно счастливы.
-Для запуска необходимо:
-<ol>
-    <li> убедиться, что у вас стоит python3.6 или выше </li>
-    <li> установить poetry:
-
-     pip install poetry 
-</li>
-    <li> установить все нужные пакеты из poetry.lock:
-    <ol>
-        <li> по умолчанию poetry создает виртуальное окружение - это лучше для изоляции от вашей системы и рекомендуем именно такой способ установи пакетов:
-            
-         poetry  install  
-</li>
-        <li> если хочется установить без виртуального окружения, то установить нужно с помощью следующей команды:
-            
-        poetry config virtualenvs.create false && poetry  install
-</li>
-    </ol> 
-    </li>
-    <li> запустить обучение
-
-    poetry run python3 train.py --train_data <path_to_train_data> --model_path <path_to_pickle_ml_model>
-</li>
-    <li> запустить предикт
-
-    poetry run python3 predict.py --model_path <path_to_pickled_model> --test_data <path_to_test_data> --output <path_to_output_csv_file>
-</li>
-    <li> загрузить полученные результаты в систему </li>
-</ol>
-## Вариант с requirements.txt
-<ol>
-    <li> убедиться, что у вас стоит python3.6 или выше </li>
-    <li> установить зависимости:
+Чтобы воспроизвести наш результат, надо воспроизвести следующие шаги:
+    <li> Убедиться, что у вас стоит python3.6 или выше </li>
+    <li> Установить зависимости:
     
     pip install -r requirements.txt 
 </li>
-    <li> запустить обучение
-
-    python3 train.py --train_data <path_to_train_data> --model_path <path_to_pickle_ml_model>
-</li>
-    <li> запустить предикт
+    <li> Расположить данные в правильной папке: скопировать файлы <b>train.csv</b> и <b>test.csv</b> в подпапку <b>data</b>. В итоге должна получиться следующая структура: 
     
-    python3 predict.py --model_path <path_to_pickled_model> --test_data <path_to_test_data> --output <path_to_output_csv_file>
+    raif_gg_hack
+        data
+            train.csv
+            test.csv
+        raif_hack
+            ...
+        train.py
+        predict.py
+        validation_split.py
+        ...
 </li>
-    <li> загрузить полученные результаты в систему</li>
-</ol>
+    <li> Выделить валидационный сет из обучающей выборки:
 
-В репозитории есть своя реализация регуляризованного target encoding (SmoothedTargetEncoding). можно поэкспериментировать с ним
+    python3 validation_split.py
+
+</li>
+    <li> Запустить обучение:
+
+    python3 train.py --model_path model.pkl --val
+</li>
+    <li> Запустить инференс:
+    
+    python3 predict.py --model_path model.pkl --test_data data --output final_submission.csv
+</li>
+    <li> Предсказания содержатся в файле <b>final_submission.csv</b></li>
+</ol>
