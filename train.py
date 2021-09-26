@@ -114,11 +114,6 @@ if __name__ == "__main__":
             )
         logger.info("Save model")
         model.save(args["mp"])
-        # predictions_offer = model.predict(X_offer)
-        # metrics = metrics_stat(
-        #     y_offer.values, predictions_offer / (1 + model.corr_coef)
-        # )  # для обучающей выборки с ценами из объявлений смотрим качество без коэффициента
-        # logger.info(f"Metrics stat for training data with offers prices: {metrics}")
 
         predictions_manual = model.predict(X_manual)
         metrics = metrics_stat(y_manual.values, predictions_manual)

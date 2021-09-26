@@ -937,9 +937,10 @@ class WeightedBlendComplex(BenchmarkModel):
         if self.__is_fitted:
             killer_f = self.pipeline.predict(X)
             X = X.copy()
+            prediction3 = self.pipeline3.predict(X)
             X["killer_f"] = killer_f
             price = self.pipeline2.predict(X)
-            return 0.94*(np.exp(killer_f) + np.exp(price) + np.exp(self.pipeline3.predict(X)))/3
+            return (np.exp(killer_f) + np.exp(price) + np.exp(prediction3))/3
             #return (np.exp(killer_f) + np.exp(self.pipeline3.predict(X)))/2
         else:
             raise NotFittedError(

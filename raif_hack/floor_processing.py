@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+from math import floor
 
 train_floor_mapping = {
     'подвал, 1': '-1, 1', 
@@ -144,11 +144,14 @@ def get_one_hot_floor_features(train_, test_):
     test = prepare_one_hot_floor(test, unique_floors)
     return train, test
 
+
 # Nb and height features
+
 
 def compute_nb_floors(df):
     df['nb_floors'] = df['floor'].map(lambda x: len(x.split(',')))
     return df
+
 
 def compute_mean_height(df):
     def mean_height(x):
@@ -165,8 +168,6 @@ def compute_mean_height(df):
         else:
             return np.nan
     df['floor_mean_height'] = df['floor'].map(mean_height)    
-    median = df['floor_mean_height'].median()
-    df['floor_mean_height'] = df['floor_mean_height'].fillna(median)
     return df
 
 
@@ -181,13 +182,20 @@ def get_floor_nb_and_height_features(train_, test_):
 
     train = compute_mean_height(train)
     test = compute_mean_height(test)
-
+    
+    fillna = train['floor_mean_height'].median()
+    train['floor_mean_height'] = train['floor_mean_height'].fillna(fillna)
+    test['floor_mean_height'] = test['floor_mean_height'].fillna(fillna)
+    fillna_one = train.groupby('region').floor_mean_height.mean()
+    
+    train_mask = train['floor_mean_height'].isna()
+    test_mask = test['floor_mean_height'].isna()
+    
+    train.loc[train_mask, 'floor_mean_height'] = train[train_mask]['realty_type'].map(fillna_one)
+    test.loc[test_mask, 'floor_mean_height'] = test[test_mask]['realty_type'].map(fillna_one)    
+    
     quantile = train['floor_mean_height'].quantile(0.99)
-
     train['floor_mean_height'] = train['floor_mean_height'].clip(upper=quantile)
     test['floor_mean_height'] = test['floor_mean_height'].clip(upper=quantile)
+    
     return train, test
-
-# Usage
-# train, test = get_floor_nb_and_height_features(train, test, train_floor_mapping, test_floor_mapping)
-# train, test = get_one_hot_floor_features(train, test, train_floor_mapping, test_floor_mapping)

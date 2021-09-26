@@ -1,6 +1,6 @@
 TARGET = "per_square_meter_price"
 # признаки (или набор признаков), для которых применяем smoothed target encoding
-CATEGORICAL_STE_FEATURES = ["region", "city", "realty_type"]
+CATEGORICAL_STE_FEATURES = ["realty_type", "region"]
 
 # признаки, для которых применяем one hot encoding
 CATEGORICAL_OHE_FEATURES = []
