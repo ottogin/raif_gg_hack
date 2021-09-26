@@ -91,7 +91,7 @@ if __name__ == "__main__":
         logger.info(
             f"X_offer {X_offer.shape}  y_offer {y_offer.shape}\tX_manual {X_manual.shape} y_manual {y_manual.shape}"
         )
-        model = WeightedBlendModel(
+        model = WeightedBlendComplex(
             numerical_features=NUM_FEATURES,
             ohe_categorical_features=CATEGORICAL_OHE_FEATURES,
             ste_categorical_features=CATEGORICAL_STE_FEATURES,
