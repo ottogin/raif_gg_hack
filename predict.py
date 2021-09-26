@@ -68,9 +68,12 @@ if __name__ == "__main__":
         logger.info("Load test df")
 
         train_path = "data/train.csv"
-        train_df = pd.read_csv(train_path)
+        train_df = pd.concat([pd.read_csv(train_path), 
+                              pd.read_csv("data/kf_train.csv")], axis=1)
 
-        test_df = pd.read_csv(args["d"])
+        test_df = pd.concat([pd.read_csv(args["d"]), 
+                             pd.read_csv("data/kf_test.csv")], axis=1)
+
         train_df, test_df = get_floor_nb_and_height_features(train_df, test_df)
         # Street encoding
         test_df = combine_street_region(test_df)
@@ -84,7 +87,7 @@ if __name__ == "__main__":
         logger.info("Load model")
         model = WeightedBlendModel.load(args["mp"])
         logger.info("Predict")
-        test_df["per_square_meter_price"] = model.predict(
+        test_df["per_square_meter_price"] = 0.94 * model.predict(
             test_df[NUM_FEATURES + CATEGORICAL_OHE_FEATURES + CATEGORICAL_STE_FEATURES]
         )
         logger.info("Save results")

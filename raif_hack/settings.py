@@ -7,6 +7,7 @@ CATEGORICAL_OHE_FEATURES = []
 
 # численные признаки
 NUM_FEATURES = [
+    'tp10_manual', 'tp10_offer',
     "lat",
     "lng",
     "osm_amenity_points_in_0.001",

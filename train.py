@@ -62,9 +62,15 @@ if __name__ == "__main__":
             train_path = "data/train_trunc.csv"
 
         logger.info("Load train df from %s" % train_path)
-        train_df = pd.read_csv(train_path)
+        train_df = pd.concat([pd.read_csv(train_path), 
+                              pd.read_csv("data/kf_train.csv")], axis=1)
+
         logger.info(f"Input shape: {train_df.shape}")
-        val_df = pd.read_csv("data/validation.csv")
+        val_df = pd.concat([pd.read_csv("data/validation.csv"), 
+                            pd.read_csv("data/kf_validation.csv")], axis=1)
+
+        val_preds = 0.5 * val_df['tp1_manual'][train_df.price_type == PriceTypeEnum.MANUAL_PRICE] + \
+                    0.5 * val_df['tp1_offer'][train_df.price_type == PriceTypeEnum.MANUAL_PRICE]
 
         train_df, val_df = get_floor_nb_and_height_features(train_df, val_df)
 
